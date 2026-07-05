@@ -15,4 +15,10 @@ public interface IAuthDemoService
     Task<ScenarioResultDto> BlindBooleanSafeAsync(ScenarioRequest request);
     Task<ScenarioResultDto> TimeBasedAttackAsync(ScenarioRequest request);
     Task<ScenarioResultDto> TimeBasedSafeAsync(ScenarioRequest request);
+
+    // Second-order SQL injection
+    Task<StoredProfileDto> StoreProfileAsync(StoreProfileRequest request);
+    Task<IReadOnlyList<StoredProfileDto>> GetStoredProfilesAsync();
+    Task<SecondOrderResultDto> SecondOrderAttackAsync(SecondOrderRequest request);
+    Task<SecondOrderResultDto> SecondOrderSafeAsync(SecondOrderRequest request);
 }

@@ -1,0 +1,42 @@
+rules:
+  #svako pravilo ima svoj id, ovo trazi FromSqlRaw injectione
+  - id: csharp-fromsqlraw-injection
+    patterns:
+      # tip emtode koje nas zanimaju 
+      # **********.   npr db.Users.FromSqlRaw(sql_kod).  ***************
+      - pattern: $DB.$METHOD($STR, ...)
+      - metavariable-regex:
+          metavariable: $METHOD
+          #mapira samu metodu
+          regex: ^(FromSqlRaw|FromSql|ExecuteSqlRaw|ExecuteSqlCommand)$
+      - metavariable-pattern:
+          #provjerava jel string literal ili varijabla, ako je varijabla onda je potencijalni rizik
+          # jer u string litteral mora ici s parameterom ne moze proc SQLi
+          metavariable: $STR
+          patterns:
+            - pattern-not: "\"...\""
+            - pattern-not: $"\"...\""
+    message: >
+      SQL injection rizik — $METHOD() pozvan s varijabilnim argumentom umjesto string literala.
+      Koristite FromSqlInterpolated() ili parametrizirani upit s SqlParameter.
+    languages: [csharp]
+    severity: ERROR
+    #oznaka SQLi, OWASP kategorija kojoj pripada npr 03 mejsto u 2021 i tip nalaza
+    metadata:
+      cwe: CWE-89
+      owasp: A03:2021 - Injection
+      category: security
+
+    #trazi CommandText injection
+    #Command text je propery objekta SqlCommand koji sadrzi SQL upit koji ce bit izbrsen
+  - id: csharp-commandtext-injection
+    pattern: $CMD.CommandText = $VAR;
+    message: >
+      SQL injection rizik — CommandText postavljen na varijablu $VAR umjesto string literala.
+      Koristite SqlCommand s SqlParameter umjesto direktne konkatenacije.
+    languages: [csharp]
+    severity: ERROR
+    metadata:
+      cwe: CWE-89
+      owasp: A03:2021 - Injection
+      category: security

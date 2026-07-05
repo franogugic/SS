@@ -150,6 +150,7 @@ public class AuthDemoService(IUserRepository users) : IAuthDemoService
         var watch = Stopwatch.StartNew();
         var matchedUsers = await users.FindByUsernameSafeAsync(request.Payload);
         watch.Stop();
+
         var isQuoteOnly = request.Payload == "'";
         var message = matchedUsers.Count > 0
             ? "Upit je sigurno izvršen s parametrom i pronašao je korisnika."
@@ -208,6 +209,7 @@ public class AuthDemoService(IUserRepository users) : IAuthDemoService
         var watch = Stopwatch.StartNew();
         var matchedUsers = await users.FindByUsernameSafeAsync(request.Payload);
         watch.Stop();
+
         var message = matchedUsers.Count > 0
             ? "Upit je sigurno izvršen s parametrom i pronašao je korisnika."
             : "Cijeli payload se uspoređuje kao korisničko ime. Ne postaje uvjet nad lozinkom, pa nema curenja informacije.";
@@ -274,6 +276,126 @@ public class AuthDemoService(IUserRepository users) : IAuthDemoService
             matchedUsers.Select(ToDto).ToList());
     }
 
+    // --- Second-order SQL injection ---
+
+    public async Task<StoredProfileDto> StoreProfileAsync(StoreProfileRequest request)
+    {
+        // Faza 1: pohrana je SIGURNA (EF Core parametrizirani INSERT).
+        // Napadač može pohraniti payload poput: admin'-- ili ' OR '1'='1
+        // Ali baza ga prima kao običan string — nema injection ovdje.
+        var profile = await users.StoreProfileSafeAsync(request.Username, request.Note);
+        return ToProfileDto(profile);
+    }
+
+    public async Task<IReadOnlyList<StoredProfileDto>> GetStoredProfilesAsync()
+    {
+        var profiles = await users.GetAllStoredProfilesAsync();
+        return profiles.Select(ToProfileDto).ToList();
+    }
+
+    public async Task<SecondOrderResultDto> SecondOrderAttackAsync(SecondOrderRequest request)
+    {
+        var profile = await users.GetStoredProfileByIdAsync(request.ProfileId);
+        if (profile is null)
+            return new SecondOrderResultDto(false, "Second-order napad",
+                $"Profil s ID={request.ProfileId} ne postoji.", "", "", "Profil nije pronađen.", 0, null, []);
+
+        // Faza 2: dohvaćeni username se KONKATENIRA u novi SQL upit.
+        // Ako je username bio: admin'-- → SQL postaje:
+        //   WHERE [Username] = 'admin'--'
+        // Komentira ostatak uvjeta i vraća admina bez provjere lozinke.
+        var phase1Sql = """
+            INSERT INTO [StoredProfiles] ([Username], [Note], [CreatedAt])
+            VALUES (@username, @note, @createdAt)
+            """;
+        var phase2Sql = $"""
+            SELECT [Id], [Username], [Password], [FullName], [Role]
+            FROM [Users]
+            WHERE [Username] = '{profile.Username}'
+            """;
+
+        var watch = Stopwatch.StartNew();
+        IReadOnlyList<AppUser> matchedUsers;
+        string? dbMessage = null;
+
+        try
+        {
+            matchedUsers = await users.FindUsersByStoredUsernameUnsafeAsync(profile.Username);
+        }
+        catch (Exception ex)
+        {
+            watch.Stop();
+            return new SecondOrderResultDto(
+                true,
+                "Second-order SQL injection (napad)",
+                "SQL greška iz pohranjenog payloada — payload je izazvao grešku u fazi 2.",
+                phase1Sql, phase2Sql, ex.Message, watch.ElapsedMilliseconds,
+                ToProfileDto(profile), []);
+        }
+
+        watch.Stop();
+        var success = matchedUsers.Count > 0 && profile.Username.Contains('\'');
+
+        var explanation = success
+            ? $"NAPAD USPIO: Payload '{profile.Username}' pohranjen je sigurno u fazi 1, ali je u fazi 2 " +
+              $"konkateniran u SQL i izmijenio logiku upita. Vraćeni su korisnici koje napadač nije trebao vidjeti."
+            : profile.Username.Contains('\'')
+                ? $"Payload '{profile.Username}' u fazi 2 nije vratio korisnike (možda profil s tim username-om zapravo postoji ili je payload nekompatibilan s ovim upitom)."
+                : $"Ovaj profil ima username '{profile.Username}' bez injection payloada — napad nije primjenjiv.";
+
+        dbMessage = matchedUsers.Count > 0
+            ? $"Faza 2 je vratila {matchedUsers.Count} korisnika za username='{profile.Username}'"
+            : $"Faza 2 nije pronašla korisnike za username='{profile.Username}'";
+
+        return new SecondOrderResultDto(
+            success,
+            "Second-order SQL injection (napad)",
+            explanation,
+            phase1Sql,
+            phase2Sql,
+            dbMessage,
+            watch.ElapsedMilliseconds,
+            ToProfileDto(profile),
+            matchedUsers.Select(ToDto).ToList());
+    }
+
+    public async Task<SecondOrderResultDto> SecondOrderSafeAsync(SecondOrderRequest request)
+    {
+        var profile = await users.GetStoredProfileByIdAsync(request.ProfileId);
+        if (profile is null)
+            return new SecondOrderResultDto(false, "Second-order sigurni",
+                $"Profil s ID={request.ProfileId} ne postoji.", "", "", "Profil nije pronađen.", 0, null, []);
+
+        var phase1Sql = """
+            INSERT INTO [StoredProfiles] ([Username], [Note], [CreatedAt])
+            VALUES (@username, @note, @createdAt)
+            """;
+        var phase2Sql = """
+            SELECT [Id], [Username], [Password], [FullName], [Role]
+            FROM [Users]
+            WHERE [Username] = @storedUsername
+            """;
+
+        var watch = Stopwatch.StartNew();
+        var matchedUsers = await users.FindUsersByStoredUsernameSafeAsync(profile.Username);
+        watch.Stop();
+
+        return new SecondOrderResultDto(
+            false,
+            "Second-order SQL injection (sigurna verzija)",
+            $"Iako je username '{profile.Username}' pohranjen u bazi, u fazi 2 se koristi kao parametar (@storedUsername). " +
+            "SQL injection payload postaje obična string vrijednost i ne mijenja logiku upita.",
+            phase1Sql,
+            phase2Sql,
+            $"Faza 2 traži doslovno korisničko ime '{profile.Username}' — pronađeno {matchedUsers.Count} rezultata.",
+            watch.ElapsedMilliseconds,
+            ToProfileDto(profile),
+            matchedUsers.Select(ToDto).ToList());
+    }
+
     private static DemoUserDto ToDto(AppUser user) =>
         new(user.Id, user.Username, user.Password, user.FullName, user.Role);
+
+    private static StoredProfileDto ToProfileDto(StoredProfile p) =>
+        new(p.Id, p.Username, p.Note, p.CreatedAt);
 }

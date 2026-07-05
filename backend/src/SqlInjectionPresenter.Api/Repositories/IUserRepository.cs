@@ -12,4 +12,11 @@ public interface IUserRepository
     Task<int> CountByUsernameSafeAsync(string username);
     Task<int> ReadUnsafeNumberAsync(string sql);
     Task ExecuteUnsafeCommandAsync(string sql);
+
+    // Second-order SQLi
+    Task<StoredProfile?> GetStoredProfileByIdAsync(int id);
+    Task<StoredProfile> StoreProfileSafeAsync(string username, string note);
+    Task<IReadOnlyList<AppUser>> FindUsersByStoredUsernameUnsafeAsync(string storedUsername);
+    Task<IReadOnlyList<AppUser>> FindUsersByStoredUsernameSafeAsync(string storedUsername);
+    Task<IReadOnlyList<StoredProfile>> GetAllStoredProfilesAsync();
 }

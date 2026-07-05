@@ -9,6 +9,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{0F9113EE-888
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlInjectionPresenter.Api", "backend\src\SqlInjectionPresenter.Api\SqlInjectionPresenter.Api.csproj", "{368634C9-CE63-4AB1-BAE2-B4404B35EDF4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlInjectionPresenter.ZapScanner", "backend\src\SqlInjectionPresenter.ZapScanner\SqlInjectionPresenter.ZapScanner.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,6 +33,10 @@ Global
 		{368634C9-CE63-4AB1-BAE2-B4404B35EDF4}.Release|x64.Build.0 = Release|Any CPU
 		{368634C9-CE63-4AB1-BAE2-B4404B35EDF4}.Release|x86.ActiveCfg = Release|Any CPU
 		{368634C9-CE63-4AB1-BAE2-B4404B35EDF4}.Release|x86.Build.0 = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -38,5 +44,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{0F9113EE-888A-26D2-68B0-4A7D0A2A8745} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
 		{368634C9-CE63-4AB1-BAE2-B4404B35EDF4} = {0F9113EE-888A-26D2-68B0-4A7D0A2A8745}
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890} = {0F9113EE-888A-26D2-68B0-4A7D0A2A8745}
 	EndGlobalSection
 EndGlobal

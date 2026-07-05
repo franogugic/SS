@@ -84,4 +84,57 @@ public class DemoController(IAuthDemoService authDemoService) : ControllerBase
         var result = await authDemoService.TimeBasedSafeAsync(request);
         return Ok(result);
     }
+
+    // --- GET endpointi s URL parametrima (za DAST/ZAP testiranje) ---
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string q = "")
+    {
+        var result = await authDemoService.UnionAttackAsync(new ScenarioRequest(q));
+        return Ok(result);
+    }
+
+    [HttpGet("login")]
+    public async Task<IActionResult> LoginGet([FromQuery] string username = "", [FromQuery] string password = "")
+    {
+        var result = await authDemoService.VulnerableLoginAsync(new LoginRequest(username, password));
+        return Ok(result);
+    }
+
+    [HttpGet("user")]
+    public async Task<IActionResult> UserGet([FromQuery] string username = "")
+    {
+        var result = await authDemoService.BlindBooleanAttackAsync(new ScenarioRequest(username));
+        return Ok(result);
+    }
+
+    // --- Second-order SQL injection ---
+
+    [HttpGet("stored-profiles")]
+    public async Task<IActionResult> GetStoredProfiles()
+    {
+        var profiles = await authDemoService.GetStoredProfilesAsync();
+        return Ok(profiles);
+    }
+
+    [HttpPost("store-profile")]
+    public async Task<IActionResult> StoreProfile(StoreProfileRequest request)
+    {
+        var profile = await authDemoService.StoreProfileAsync(request);
+        return Ok(profile);
+    }
+
+    [HttpPost("second-order-attack")]
+    public async Task<IActionResult> SecondOrderAttack(SecondOrderRequest request)
+    {
+        var result = await authDemoService.SecondOrderAttackAsync(request);
+        return Ok(result);
+    }
+
+    [HttpPost("second-order-safe")]
+    public async Task<IActionResult> SecondOrderSafe(SecondOrderRequest request)
+    {
+        var result = await authDemoService.SecondOrderSafeAsync(request);
+        return Ok(result);
+    }
 }
