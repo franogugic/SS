@@ -18,9 +18,7 @@ public sealed class ZapClient(string zapProxyUrl)
 
     // ZAP API se poziva kroz proxy s hostom "zap"
     private const string ZapApiHost = "http://zap";
-
-    // ── Active Scan ─────────────────────────────────────────────────────────
-
+    
     // pokreće active scan — ova faza testira ranjivosti
     public async Task<string> StartActiveScanAsync(string targetUrl)
     {
@@ -41,9 +39,7 @@ public sealed class ZapClient(string zapProxyUrl)
             await Task.Delay(4000);
         }
     }
-
-    // ── Alerts ──────────────────────────────────────────────────────────────
-
+    
     // dohvaća sve rezultate nakon scana
     public async Task<List<ZapAlert>> GetAlertsAsync(string baseUrl)
     {
@@ -53,18 +49,15 @@ public sealed class ZapClient(string zapProxyUrl)
         return result?.Alerts ?? [];
     }
 
-    // ── Scope / Context ─────────────────────────────────────────────────────
 
-    // osigurava da ZAP zna za endpoint prije scana
+    // stavlja taj url u zap
     public async Task AccessUrlAsync(string targetUrl)
     {
         var url = $"{ZapApiHost}/JSON/core/action/accessUrl/?url={Uri.EscapeDataString(targetUrl)}";
         await GetJsonAsync(url);
     }
 
-    // ── Utility ─────────────────────────────────────────────────────────────
-
-    // čeka da ZAP daemon bude spreman
+    //dohvaca odgovore od ZAP-a
     public async Task WaitForZapAsync()
     {
         Console.WriteLine("Čekam na ZAP daemon...");

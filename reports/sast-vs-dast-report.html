@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAST vs DAST — SQL Injection Izvještaj</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; margin: 0; background: #f8faf6; color: #14181f; font-size: 14px; line-height: 1.6; }
+    .shell { max-width: 1200px; margin: 0 auto; padding: 24px 20px; display: flex; flex-direction: column; gap: 24px; }
+    .header { background: white; border: 1px solid #e7e5e4; border-radius: 10px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .header-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #0f766e; margin-bottom: 8px; }
+    .header h1 { margin: 0 0 6px 0; font-size: 22px; font-weight: 600; color: #14181f; }
+    .header-meta { font-size: 12px; color: #78716c; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .full { grid-column: 1 / -1; }
+    .card { background: white; border: 1px solid #e7e5e4; border-radius: 10px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .card-sast { border-top: 3px solid #be123c; }
+    .card-dast { border-top: 3px solid #0f766e; }
+    .card-summary { border-top: 3px solid #14181f; }
+    .card h2 { margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: #14181f; padding-bottom: 10px; border-bottom: 1px solid #f5f5f4; }
+    .stats-row { display: flex; gap: 24px; margin-bottom: 16px; flex-wrap: wrap; }
+    .stat-box { text-align: center; min-width: 80px; }
+    .stat-num { font-size: 28px; font-weight: 700; color: #14181f; line-height: 1; }
+    .stat-lbl { font-size: 11px; color: #78716c; margin-top: 4px; }
+    .insight { background: #fefce8; border-left: 3px solid #b45309; padding: 12px 14px; border-radius: 4px; font-size: 13px; color: #44403c; }
+    table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+    th { background: #f5f5f4; color: #44403c; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 8px 10px; text-align: left; }
+    td { padding: 8px 10px; border-bottom: 1px solid #f5f5f4; font-size: 13px; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafaf9; }
+    code { background: #f5f5f4; border: 1px solid #e7e5e4; padding: 1px 5px; border-radius: 4px; font-size: 12px; font-family: ui-monospace, monospace; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+    .badge-high { background: #ffe4e6; color: #be123c; }
+    .badge-medium { background: #fef3c7; color: #b45309; }
+    .badge-second { background: #dcfce7; color: #15803d; }
+    .badge-direct { background: #fee2e2; color: #be123c; }
+    .badge-rule { background: #ede9fe; color: #6d28d9; }
+    .note { font-size: 12px; color: #78716c; margin-top: 12px; line-height: 1.5; }
+    .empty { color: #78716c; font-size: 13px; padding: 12px 0; }
+    @media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } .full { grid-column: 1; } }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <div class="header">
+    <div class="header-label">SQL Injection Demo — Usporedni Izvještaj</div>
+    <h1>SAST vs DAST analiza</h1>
+    <div class="header-meta">Generirano: 2026-07-05T20:59 UTC &nbsp;·&nbsp; Target: <code>http://host.docker.internal:8081</code></div>
+  </div>
+  <div class="grid2">
+    <div class="card card-summary full">
+      <h2>Sažetak</h2>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-num">6</div><div class="stat-lbl">SAST SQLi nalazi</div></div>
+        <div class="stat-box"><div class="stat-num">1</div><div class="stat-lbl">SAST second-order</div></div>
+        <div class="stat-box"><div class="stat-num">11</div><div class="stat-lbl">DAST SQLi nalazi</div></div>
+        <div class="stat-box"><div class="stat-num">NE</div><div class="stat-lbl">DAST second-order</div></div>
+      </div>
+      <div class="insight"><strong>Zaključak:</strong> SAST detektira SVE SQLi uključujući second-order (statička analiza koda). DAST detektira klasični SQLi (HTTP payloadi), ali PROPUŠTA second-order jer ne može povezati /store-profile i /second-order-attack kao jedan napadački lanac.</div>
+    </div>
+    <div class="card card-sast">
+      <h2>SAST — Semgrep</h2>
+      <table><tr><th>Datoteka</th><th>Metoda</th><th>Pravilo</th><th>Vrsta</th></tr>
+      <tr><td><code>Services/AuthDemoService.cs</code></td><td><code>VulnerableLoginAsync</code></td><td><span class='badge badge-rule'>S3649</span></td><td><span class='badge badge-direct'>Direktni</span></td></tr>
+<tr><td><code>Services/AuthDemoService.cs</code></td><td><code>UnionAttackAsync</code></td><td><span class='badge badge-rule'>S3649</span></td><td><span class='badge badge-direct'>Direktni</span></td></tr>
+<tr><td><code>Services/AuthDemoService.cs</code></td><td><code>ErrorAttackAsync</code></td><td><span class='badge badge-rule'>S3649</span></td><td><span class='badge badge-direct'>Direktni</span></td></tr>
+<tr><td><code>Services/AuthDemoService.cs</code></td><td><code>BlindBooleanAttackAsync</code></td><td><span class='badge badge-rule'>S3649</span></td><td><span class='badge badge-direct'>Direktni</span></td></tr>
+<tr><td><code>Services/AuthDemoService.cs</code></td><td><code>TimeBasedAttackAsync</code></td><td><span class='badge badge-rule'>S3649</span></td><td><span class='badge badge-direct'>Direktni</span></td></tr>
+<tr><td><code>Repositories/UserRepository.cs</code></td><td><code>FindUsersByStoredUsernameUnsafeAsync</code></td><td><span class='badge badge-rule'>S3649</span></td><td><span class='badge badge-second'>Second-order</span></td></tr>
+
+      </table>
+      <p class="note">Semgrep analizira izvorni kôd statički. Detektira second-order jer vidi <code>FromSqlRaw</code> s varijabilnim argumentom, neovisno odakle dolaze podaci.</p>
+    </div>
+    <div class="card card-dast">
+      <h2>DAST — OWASP ZAP</h2>
+      <table><tr><th>URL</th><th>Metoda</th><th>Parametar</th><th>Risk</th></tr>
+      <tr><td><code>http://host.docker.internal:8081/api/demo/login?usernam…</code></td><td>GET</td><td><code>username</code></td><td><span class='badge badge-medium'>Unknown</span></td></tr>
+<tr><td><code>http://host.docker.internal:8081/api/demo/user?username…</code></td><td>GET</td><td><code>username</code></td><td><span class='badge badge-medium'>Unknown</span></td></tr>
+<tr><td><code>http://host.docker.internal:8081/api/demo/search?q=%27</code></td><td>GET</td><td><code>q</code></td><td><span class='badge badge-medium'>Unknown</span></td></tr>
+<tr><td><code>http://host.docker.internal:8081/api/demo/login?usernam…</code></td><td>GET</td><td><code>password</code></td><td><span class='badge badge-medium'>Unknown</span></td></tr>
+<tr><td><code>http://host.docker.internal:8081/api/demo/user?username…</code></td><td>GET</td><td><code>username</code></td><td><span class='badge badge-medium'>Unknown</span></td></tr>
+<tr><td><code>http://host.docker.internal:8081/api/demo/login?usernam…</code></td><td>GET</td><td><code>username</code></td><td><span class='badge badge-medium'>Unknown</span></td></tr>
+<tr><td><code>http://host.docker.internal:8081/api/demo/search?q=test</code></td><td>GET</td><td><code>q</code></td><td><span class='badge badge-medium'>Unknown</span></td></tr>
+<tr><td><code>http://host.docker.internal:8081/api/demo/login?usernam…</code></td><td>GET</td><td><code>password</code></td><td><span class='badge badge-medium'>Unknown</span></td></tr>
+<tr><td><code>http://host.docker.internal:8081/api/demo/login?usernam…</code></td><td>GET</td><td><code>username</code></td><td><span class='badge badge-medium'>Unknown</span></td></tr>
+<tr><td><code>http://host.docker.internal:8081/api/demo/user?username…</code></td><td>GET</td><td><code>username</code></td><td><span class='badge badge-medium'>Unknown</span></td></tr>
+<tr><td><code>http://host.docker.internal:8081/api/demo/search?q=test</code></td><td>GET</td><td><code>q</code></td><td><span class='badge badge-medium'>Unknown</span></td></tr>
+
+      </table>
+      <p class="note">DAST šalje stvarne HTTP zahtjeve. Propušta second-order jer testira <code>/store-profile</code> i <code>/second-order-attack</code> kao zasebne endpointe.</p>
+    </div>
+    <div class="card full">
+      <h2>Svi DAST nalazi</h2>
+      <table><tr><th>Plugin</th><th>Naziv</th><th>Risk</th><th>URL</th><th>Parametar</th></tr>
+      <tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+<tr><td><code></code></td><td></td><td>-</td><td><code></code></td><td></td></tr>
+
+      </table>
+    </div>
+  </div>
+</div>
+</body></html>

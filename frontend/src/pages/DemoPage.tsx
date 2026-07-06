@@ -8,6 +8,7 @@ import { navigationItems, scenarios, type DemoPageId, type ScenarioPageId } from
 import { useUsers } from '../hooks/useUsers';
 import type { DemoResult, LoginRequest, LoginResult } from '../types/authDemo';
 import { LoginBypassPage } from './LoginBypassPage';
+import { ReportPage } from './ReportPage';
 import { ScenarioAttackPage } from './ScenarioAttackPage';
 
 const attackPayload: LoginRequest = {
@@ -23,6 +24,7 @@ const initialScenarioValues = {
 };
 
 const scenarioPageIds: ScenarioPageId[] = ['union', 'error', 'boolean', 'time'];
+const nonScenarioPageIds = ['login', 'report'] as const;
 
 function isDemoPageId(value: string | null): value is DemoPageId {
   return navigationItems.some((item) => item.id === value);
@@ -158,7 +160,7 @@ export function DemoPage() {
           />
         )}
 
-        {activePage !== 'login' && (
+        {isScenarioPageId(activePage) && (
           <ScenarioAttackPage
             scenario={scenarios[activePage as ScenarioPageId]}
             value={scenarioValues[activePage as ScenarioPageId]}
@@ -175,10 +177,12 @@ export function DemoPage() {
           />
         )}
 
-        <UserTable users={users} loading={loading} error={usersError} />
+        {activePage !== 'report' && <UserTable users={users} loading={loading} error={usersError} />}
       </div>
 
-      <div className="grid min-w-0 gap-6 xl:grid-cols-2">
+      {activePage === 'report' && <ReportPage />}
+
+      {activePage !== 'report' && <div className="grid min-w-0 gap-6 xl:grid-cols-2">
         <ResultPanel
           title="Bez zaštite"
           emptyText="Pokreni ranjivi tok za prikaz rezultata."
@@ -191,7 +195,7 @@ export function DemoPage() {
           result={safeResult}
           error={safeError}
         />
-      </div>
+      </div>}
     </PageShell>
   );
 }

@@ -1,7 +1,7 @@
-import { Clock, DatabaseZap, KeyRound, SearchCode, TriangleAlert } from 'lucide-react';
+import { Clock, DatabaseZap, FileText, KeyRound, SearchCode, TriangleAlert } from 'lucide-react';
 
-export type DemoPageId = 'login' | 'union' | 'error' | 'boolean' | 'time';
-export type ScenarioPageId = Exclude<DemoPageId, 'login'>;
+export type DemoPageId = 'login' | 'union' | 'error' | 'boolean' | 'time' | 'report';
+export type ScenarioPageId = Exclude<DemoPageId, 'login' | 'report'>;
 
 export interface DemoPageMeta {
   id: DemoPageId;
@@ -59,6 +59,13 @@ export const navigationItems: DemoPageMeta[] = [
     shortTitle: 'Vrijeme',
     description: 'Istina se zaključuje iz namjernog kašnjenja odgovora.',
     icon: Clock
+  },
+  {
+    id: 'report',
+    title: 'SAST vs DAST izvještaj',
+    shortTitle: 'Izvještaj',
+    description: 'Usporedba Semgrep (SAST) i OWASP ZAP (DAST) nalaza.',
+    icon: FileText
   }
 ];
 
